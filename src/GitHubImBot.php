@@ -9,44 +9,71 @@ namespace Demo;
 
 class GitHubImBot
 {
-	/** @var bool */
+	/**
+	 * Debug mode switch flag
+	 * @var bool
+	 */
 	protected $debug = true;
 
-	/** @var string  */
+	/**
+	 * Runtime configuration file full path
+	 * @var string
+	 */
 	protected $configFile;
 
-	/** @var array */
+	/**
+	 * Loaded runtime configuration data
+	 * @var array
+	 */
 	protected $config = [];
 
-	/** @var string  */
+	/**
+	 * Log file full path
+	 * @var string
+	 */
 	protected $logFile;
 
-	/** @var array */
+	/**
+	 * Authorize data, received from event
+	 * @var array
+	 */
 	protected $auth = [];
 
-	/** @var array */
+	/**
+	 * Request headers
+	 * @var array
+	 */
 	protected $headers = [];
 
-	/** @var string */
+	/**
+	 * Backward action url
+	 * @var string
+	 */
 	protected $handlerBackUrl;
 
-	/** @var string */
+	/**
+	 * Event type
+	 * @var string
+	 */
 	protected $event = '';
 
-	/** @var \Closure */
-	protected $eventHandler;
+	/**
+	 * Event handler
+	 * @var \Closure
+	 */
+	protected $eventHandlers = [];
 
-	/** @var string */
+	/**
+	 * Row request data from post body
+	 * @var string
+	 */
 	protected $payloadRow;
 
-	/** @var \stdClass|array */
+	/**
+	 * Parsed request data
+	 * @var \stdClass|array
+	 */
 	protected $payload;
-
-
-	public function __construct()
-	{
-		$this->configFile = __DIR__.'/.config.php';
-	}
 
 
 	/**
@@ -55,26 +82,33 @@ class GitHubImBot
 	 */
 	public function init(): self
 	{
+		if ($this->configFile === null)
+		{
+			$this->configFile = __DIR__.'/.runtime.php';
+		}
 		$this->config = $this->getConfig();
 
 		// oauth
-		if(isset($_POST["auth"]))
+		if (isset($this->config['AUTH']))
+		{
+			$this->auth = $this->config['AUTH'];
+		}
+		if (isset($_POST["auth"]))
 		{
 			$this->auth = $_POST["auth"];
 		}
-
 		// iframe mode
-		elseif(isset($_REQUEST['PLACEMENT']) && $_REQUEST['PLACEMENT'] === 'DEFAULT')
+		elseif (isset($_REQUEST['PLACEMENT']) && $_REQUEST['PLACEMENT'] === 'DEFAULT')
 		{
-			if(isset($_REQUEST["AUTH_ID"]))
+			if (isset($_REQUEST["AUTH_ID"]))
 			{
 				$this->auth['access_token'] = htmlspecialchars($_REQUEST["AUTH_ID"]);
 			}
-			if(isset($_REQUEST["AUTH_EXPIRES"]))
+			if (isset($_REQUEST["AUTH_EXPIRES"]))
 			{
 				$this->auth['expires_in'] = htmlspecialchars($_REQUEST["AUTH_EXPIRES"]);
 			}
-			if(isset($_REQUEST["APP_SID"]))
+			if (isset($_REQUEST["APP_SID"]))
 			{
 				$this->auth['application_token'] = htmlspecialchars($_REQUEST["APP_SID"]);
 			}
@@ -82,7 +116,7 @@ class GitHubImBot
 			{
 				$this->auth['refresh_token'] = htmlspecialchars($_REQUEST["REFRESH_ID"]);
 			}
-			if(isset($_REQUEST["DOMAIN"]))
+			if (isset($_REQUEST["DOMAIN"]))
 			{
 				$this->auth['domain'] = htmlspecialchars($_REQUEST["DOMAIN"]);
 				$this->auth['client_endpoint'] =
@@ -145,7 +179,7 @@ class GitHubImBot
 	{
 		if (strpos($this->event, 'GitHub-') === 0)
 		{
-			if (isset($this->eventHandler[$this->event]))
+			if (isset($this->eventHandlers[$this->event]))
 			{
 				$this->callEventHandler($this->event);
 			}
@@ -172,7 +206,7 @@ class GitHubImBot
 	 */
 	public function setEventHandler(string $event, \Closure $handler): self
 	{
-		$this->eventHandler[$event] = $handler;
+		$this->eventHandlers[$event] = $handler;
 
 		return $this;
 	}
@@ -186,10 +220,10 @@ class GitHubImBot
 	 */
 	public function callEventHandler(string $event): void
 	{
-		if (isset($this->eventHandler[$event]) && $this->eventHandler[$event] instanceof \Closure)
+		if (isset($this->eventHandlers[$event]) && $this->eventHandlers[$event] instanceof \Closure)
 		{
 			/** @var \Closure $handler */
-			$handler = $this->eventHandler[$event]->bindTo($this, __CLASS__);
+			$handler = $this->eventHandlers[$event]->bindTo($this, __CLASS__);
 			$handler();
 		}
 	}
@@ -364,117 +398,15 @@ class GitHubImBot
 	 * @param $method - Rest method, ex: methods
 	 * @param array $params - Method params, ex: Array()
 	 * @param array $auth - Authorize data, received from event
-	 * @param boolean $authRefresh - If authorize is expired, refresh token
 	 * @return mixed
 	 */
-	public function restCommand($method, array $params = [], array $auth = [], $authRefresh = true)
+	public function restCommand($method, array $params = [], array $auth = [])
 	{
-		$queryUrl = $auth["client_endpoint"]. $method. '.json';
+		\Demo\RestClient::$auth = $this->auth;
 
-		$queryData = http_build_query(array_merge($params, array("auth" => $auth["access_token"])));
+		$result = \Demo\RestClient::call($method, $params);
 
-		$this->log(
-			Array('URL' => $queryUrl, 'PARAMS' => array_merge($params, array("auth" => $auth["access_token"]))),
-			'Rest command: '.$method
-		);
-
-		$curl = curl_init();
-
-		curl_setopt_array($curl, array(
-			\CURLOPT_POST => 1,
-			\CURLOPT_HEADER => 0,
-			\CURLOPT_RETURNTRANSFER => 1,
-			\CURLOPT_SSL_VERIFYPEER => ($this->debug !== true),
-			\CURLOPT_URL => $queryUrl,
-			\CURLOPT_POSTFIELDS => $queryData,
-		));
-
-		$result = curl_exec($curl);
-
-		if($result === false)
-		{
-			$this->log(curl_error($curl), 'Http query error');
-			curl_close($curl);
-		}
-		else
-		{
-			curl_close($curl);
-
-			$result = json_decode($result, true);
-
-			$this->log($result,'Rest response');
-
-			if ($authRefresh && isset($result['error']) && in_array($result['error'], array('expired_token', 'invalid_token')))
-			{
-				$auth = $this->restAuth($auth);
-				if ($auth)
-				{
-					$result = $this->restCommand($method, $params, $auth, false);
-				}
-			}
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Get new authorize data if you authorize is expire.
-	 *
-	 * @param array $auth - Authorize data, received from event
-	 * @return bool|mixed
-	 */
-	public function restAuth($auth)
-	{
-		if(!isset($auth['refresh_token']))
-		{
-			return false;
-		}
-
-		$queryData = http_build_query($queryParams = array(
-			'grant_type' => 'refresh_token',
-			'client_id' => \C_REST_CLIENT_ID,
-			'client_secret' => \C_REST_CLIENT_SECRET,
-			'refresh_token' => $auth['refresh_token'],
-		));
-
-		$this->log(Array('URL' => 'https://oauth.bitrix.info/oauth/token/', 'PARAMS' => $queryParams), 'Request auth data');
-
-		$curl = curl_init();
-
-		curl_setopt_array($curl, array(
-			\CURLOPT_HEADER => 0,
-			\CURLOPT_RETURNTRANSFER => 1,
-			\CURLOPT_SSL_VERIFYPEER => ($this->debug !== true),
-			\CURLOPT_URL => 'https://oauth.bitrix.info/oauth/token/'. '?'. $queryData,
-		));
-
-		$result = curl_exec($curl);
-
-		if($result === false)
-		{
-			$this->log(curl_error($curl), 'Http query error');
-			curl_close($curl);
-		}
-		else
-		{
-			curl_close($curl);
-
-			$result = json_decode($result, true);
-
-			$this->log($result,'Response auth');
-
-			if (!isset($result['error']))
-			{
-				$result['application_token'] = $auth['application_token'];
-				$this->config['AUTH'] = $result;
-
-				$this->saveConfig($this->config);
-			}
-			else
-			{
-				$result = false;
-			}
-		}
+		$this->auth = \Demo\RestClient::$auth;
 
 		return $result;
 	}
