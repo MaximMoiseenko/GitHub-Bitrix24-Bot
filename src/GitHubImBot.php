@@ -13,7 +13,7 @@ class GitHubImBot
 	 * Debug mode switch flag
 	 * @var bool
 	 */
-	protected $debug = true;
+	protected $debug = false;
 
 	/**
 	 * Runtime configuration file full path

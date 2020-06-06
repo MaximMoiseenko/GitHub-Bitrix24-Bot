@@ -1,0 +1,24 @@
+{
+	"autoload": {
+		"psr-4": {
+			"Demo\\": "src/"
+		}
+	},
+    "repositories": [
+        {
+            "type":"package",
+            "package": {
+                "name": "bitrix-tools/crest",
+                "version": "1.0",
+                "source": {
+                    "url": "https://github.com/bitrix-tools/crest.git",
+                    "type": "git",
+                    "reference":"master"
+                }
+            }
+        }
+    ],
+    "require": {
+        "bitrix-tools/crest": "1.0"
+    }
+}
