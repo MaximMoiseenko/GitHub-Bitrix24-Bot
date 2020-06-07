@@ -1,7 +1,5 @@
 <?php declare(strict_types=1);
 
-error_reporting(E_ALL);
-
 /**
  *
  * GitHub Webhooks
@@ -10,18 +8,16 @@ error_reporting(E_ALL);
  * Bitrix Rest manual
  * https://dev.1c-bitrix.ru/rest_help/
  *
- * Bitrix Rest learning course
- * https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=99
- *
  * Bitrix IM bot platform learning course
- * https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=93
+ * https://bitrix24.ru/~bot
  *
- **/
-
+ */
 
 require "./.settings.php";
 require "./vendor/autoload.php";
 require "./vendor/bitrix-tools/crest/src/crest.php";
+
+error_reporting(E_ALL);
 
 
 (new \Demo\GitHubImBot)
@@ -29,7 +25,7 @@ require "./vendor/bitrix-tools/crest/src/crest.php";
 	->setConfigFile(__DIR__ . '/.runtime.php')
 
 	// setup debug and log
-	->debugMode(true)
+	->debugMode(false)
 	->setLogFile(__DIR__ . '/logs/hook.txt')
 
 
@@ -169,10 +165,14 @@ require "./vendor/bitrix-tools/crest/src/crest.php";
 			}
 
 			//action
-			$actionType = ucfirst($payload->action);
+			$actionType = '';
+			if (isset($payload->action))
+			{
+				$actionType = ucfirst($payload->action);
+			}
 
 			// subject
-			$subjectType = str_replace(['-','_'], ' ', $this->headers['X-GitHub-Event']);
+			$subjectType = ucfirst(str_replace(['-','_'], ' ', $this->headers['X-GitHub-Event']));
 
 			$message = [
 				"DIALOG_ID" => $dialogId,
