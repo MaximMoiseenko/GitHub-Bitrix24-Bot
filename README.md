@@ -18,7 +18,7 @@
 1. Скачивание и установку пакета и зависимостей рекомендуется выполнить используя composer - `composer install`
 2. Зарегистрируете новое локальное приложение на своём портале Битрикс24. Скрипт `bot.php` из примера укажите в URL приложения и URL скрипта установки. Например: https://you.domain.xx/bot.php
 3. Значения, полученных параметров client_id и client_secret для авторизации OAuth 2.0 из карточки локального приложения, поместите в константы `C_REST_CLIENT_ID` и `C_REST_CLIENT_SECRET` в файле `.settings.php`
-4. В настройках репозитария на GitHub (https://github.com/&lt;your&gt;/&lt;repository&gt;/settings/hooks/) включите и настройте типы уведомлений о событиях. Скрипт `hook.php` из примера необходимо указать как параметр `Payload URL`. Например: https://you.domain.xx/hook.php
+4. В настройках репозитария на GitHub (https://github.com/your/repository/settings/hooks/) включите и настройте типы уведомлений о событиях. Скрипт `hook.php` из примера необходимо указать как параметр `Payload URL`. Например: https://you.domain.xx/hook.php
 5. Полученное значение ключа `Secret` из настроек хука необходимо указать в константе `GITHUB_SECRET_TOKEN` в файле `.settings.php`
 
 Пример использует для выполнения запросов и продления токенов авторизации базовый SDK класс CRest из пакета `bitrix-tools/crest`, который имеет свои дополнительные [настройки работы с рест](https://github.com/bitrix-tools/crest) запросами.
