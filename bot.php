@@ -25,7 +25,7 @@ error_reporting(E_ALL);
 	->setConfigFile(__DIR__ . '/.runtime.php')
 
 	// setup debug and log
-	->debugMode(false)
+	->debugMode(true)
 	->setLogFile(__DIR__ . '/logs/rest.txt')
 
 
