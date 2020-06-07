@@ -25,7 +25,7 @@ error_reporting(E_ALL);
 	->setConfigFile(__DIR__ . '/.runtime.php')
 
 	// setup debug and log
-	->debugMode(true)
+	->debugMode(false)
 	->setLogFile(__DIR__ . '/logs/hook.txt')
 
 
